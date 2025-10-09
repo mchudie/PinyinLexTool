@@ -1,0 +1,19 @@
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+*.sln.docstates
+
+# IDE
+.vs/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
