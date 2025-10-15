@@ -13,12 +13,12 @@ internal sealed class Program
         app.Configure(cfg =>
         {
             cfg.SetApplicationName("PinyinLexTool");
+            cfg.AddCommand<ListCommand>("list")
+               .WithDescription("列出现有短语；支持按拼音过滤");
             cfg.AddCommand<ExportCommand>("export")
                .WithDescription("导出系统当前自定义短语到 TXT 文件");
             cfg.AddCommand<ImportCommand>("import")
                .WithDescription("从 TXT 导入短语到 .lex（相同拼音会替换现有条目）");
-            cfg.AddCommand<ListCommand>("list")
-               .WithDescription("列出现有短语；支持按拼音过滤");
         });
         return app.Run(args);
     }
