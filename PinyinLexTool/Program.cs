@@ -19,6 +19,8 @@ internal sealed class Program
                .WithDescription("导出系统当前自定义短语到 TXT 文件");
             cfg.AddCommand<ImportCommand>("import")
                .WithDescription("从 TXT 导入短语到 .lex（相同拼音会替换现有条目）");
+            cfg.AddCommand<DebugCommand>("debug")
+               .WithDescription("显示调试信息，用于问题排查");
         });
         return app.Run(args);
     }
@@ -117,6 +119,70 @@ public sealed class ListCommand : Command<ListCommand.Settings>
         {
             System.Console.WriteLine($"{p.Pinyin} {p.Index} {p.Text}");
         }
+        return 0;
+    }
+}
+
+/// <summary>调试命令。</summary>
+public sealed class DebugCommand : Command<DebugCommand.Settings>
+{
+    /// <summary>调试参数。</summary>
+    public sealed class Settings : CommandSettings
+    {
+        /// <summary>显示详细信息。</summary>
+        [CommandOption("--verbose")]
+        public bool Verbose { get; init; }
+    }
+
+    /// <summary>执行调试逻辑。</summary>
+    public override int Execute([NotNull] CommandContext context, [NotNull] Settings settings)
+    {
+        Console.WriteLine("=== PinyinLexTool 调试信息 ===");
+        Console.WriteLine($"版本: 1.0.1");
+        Console.WriteLine($"运行时间: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        Console.WriteLine($"操作系统: {Environment.OSVersion}");
+        Console.WriteLine($"运行时: {Environment.Version}");
+        Console.WriteLine($"工作目录: {Environment.CurrentDirectory}");
+        
+        var lexPath = LexPaths.GetUserLexPath();
+        Console.WriteLine($"默认 .lex 路径: {lexPath}");
+        
+        if (File.Exists(lexPath))
+        {
+            var fileInfo = new FileInfo(lexPath);
+            Console.WriteLine($"文件存在: 是");
+            Console.WriteLine($"文件大小: {fileInfo.Length} 字节");
+            Console.WriteLine($"最后修改: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
+            
+            if (settings.Verbose)
+            {
+                try
+                {
+                    var reader = new LexFileReader();
+                    var phrases = reader.ReadAllAsync(lexPath).GetAwaiter().GetResult();
+                    Console.WriteLine($"短语数量: {phrases.Count}");
+                    
+                    if (phrases.Count > 0)
+                    {
+                        Console.WriteLine("前 5 个短语:");
+                        foreach (var phrase in phrases.Take(5))
+                        {
+                            Console.WriteLine($"  {phrase.Pinyin} {phrase.Index} {phrase.Text}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"读取文件时出错: {ex.Message}");
+                }
+            }
+        }
+        else
+        {
+            Console.WriteLine($"文件存在: 否");
+        }
+        
+        Console.WriteLine("=== 调试信息结束 ===");
         return 0;
     }
 }
