@@ -45,6 +45,8 @@ rq  1 %yyyy%-%MM%-%dd%
 
 ### 批量导入
 
+#### 命令行方式
+
 ```powershell
 # 基本导入（自动备份）
 PinyinLexTool import phrases.txt
@@ -62,9 +64,19 @@ PinyinLexTool import phrases.txt --dry-run --verbose
 PinyinLexTool import phrases.txt --verbose
 ```
 
+#### 图形界面方式
+
+1. 启动 PinyinLexToolUI 程序
+2. 切换到"导入短语"选项卡
+3. 点击"选择文件..."按钮选择要导入的TXT文件，或直接在文本框中输入短语内容
+4. 根据需要设置"创建备份"、"仅校验"和"显示详细信息"选项
+5. 点击"导入"按钮执行导入操作
+
 导入完成后重新部署/切换输入法以生效。
 
 ### 批量导出
+
+#### 命令行方式
 
 ```powershell
 # 导出到指定文件
@@ -74,7 +86,17 @@ PinyinLexTool export my_phrases.txt
 PinyinLexTool export my_phrases.txt --lex "C:\Users\用户名\AppData\Roaming\Microsoft\InputMethod\Chs\ChsPinyinEUDPv1.lex"
 ```
 
+#### 图形界面方式
+
+1. 启动 PinyinLexToolUI 程序
+2. 切换到"导出短语"选项卡
+3. 点击"选择文件..."按钮选择导出目标文件
+4. 点击"导出"按钮执行导出操作
+5. 导出完成后，内容会显示在文本框中，可以点击"复制到剪贴板"按钮复制内容
+
 ### 列出现有短语
+
+#### 命令行方式
 
 ```powershell
 # 列出所有短语
@@ -86,6 +108,14 @@ PinyinLexTool list --filter clc
 # 指定 .lex 文件路径
 PinyinLexTool list --lex "C:\Users\用户名\AppData\Roaming\Microsoft\InputMethod\Chs\ChsPinyinEUDPv1.lex"
 ```
+
+#### 图形界面方式
+
+1. 启动 PinyinLexToolUI 程序
+2. 切换到"查看短语"选项卡
+3. 可选：在"拼音过滤"文本框中输入要筛选的拼音
+4. 点击"查询"按钮显示短语列表
+5. 结果将以表格形式显示，包含拼音、位置和短语文本
 
 ### 查看帮助
 
@@ -149,7 +179,7 @@ PinyinLexTool list --help
 - [x] 自动备份
 - [x] 干运行模式
 - [x] 详细统计与错误报告
-- [ ] GUI 前端（可选）
+- [x] GUI 前端（WPF实现）
 - [ ] 显示系统版本/诊断信息
 - [ ] JSON 格式输出支持
 
