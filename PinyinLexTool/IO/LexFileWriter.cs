@@ -41,10 +41,12 @@ public sealed class LexFileWriter
             filtered.Add(new Rec(false, pinyinBytes, header, phraseBytes));
         }
 
-        // 排序保证稳定
-        filtered.Sort((a, b) => CompareBytes(a.PinyinBytes, b.PinyinBytes));
+        var records = filtered
+            .OrderBy(record => record.PinyinBytes, Comparer<byte[]>.Create(CompareBytes))
+            .ThenBy(record => record.Header16[CandidatePositionOffset])
+            .ToList();
 
-        WriteAll(lexPath, filtered);
+        WriteAll(lexPath, records);
         await Task.CompletedTask;
         return overwritten;
     }
@@ -55,6 +57,8 @@ public sealed class LexFileWriter
     private const int TotalBytesPos = HeaderLen + 4;// 0x18
     private const int PhraseCntPos = HeaderLen + 8; // 0x1C
     private const int PhraseLenFirstPos = PhraseCntPos + 40; // 0x44
+    private const int CandidatePositionOffset = 6; // 候选位置只占短语头中的一个字节
+    private const byte CandidatePositionMarker = 0x06;
 
     private sealed record Rec(bool IsOld, byte[] PinyinBytes, byte[] Header16, byte[] PhraseBytes);
 
@@ -201,7 +205,6 @@ public sealed class LexFileWriter
 
     private static int ReadU32(byte[] buf, int off) => BitConverter.ToInt32(buf, off);
     private static void WriteU16(byte[] buf, int off, int v) => BitConverter.GetBytes((ushort)v).CopyTo(buf, off);
-    private static void WriteU32(byte[] buf, int off, uint v) => BitConverter.GetBytes(v).CopyTo(buf, off);
 
     private static byte[] BuildHeader(int headerPinyinLen, int index, ReadOnlySpan<byte> tail)
     {
@@ -209,9 +212,8 @@ public sealed class LexFileWriter
         WriteU16(h, 0, 0x0010);
         WriteU16(h, 2, 0x0010);
         WriteU16(h, 4, checked((ushort)headerPinyinLen));
-        WriteU32(h, 6, (uint)index);
-        WriteU16(h, 10, 0x0006);
-        WriteU16(h, 12, 0x0000);
+        h[CandidatePositionOffset] = checked((byte)index);
+        h[CandidatePositionOffset + 1] = CandidatePositionMarker;
         h[14] = tail.Length > 0 ? tail[0] : (byte)0xA5;
         h[15] = tail.Length > 1 ? tail[1] : (byte)0x2C;
         return h;

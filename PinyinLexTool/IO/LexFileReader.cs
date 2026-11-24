@@ -20,7 +20,7 @@ public sealed class LexFileReader
     {
         // 解析思路来自你的 LINQPad 草稿：读取头、根据偏移表切分记录区，每条记录：
         // [16B header][pinyin UTF-16LE][00 00][phrase UTF-16LE][00 00]
-        // 过滤“已删除”（seg[9] == 0 代表未删除），并解析候选 index 与 tail 不参与导出。
+        // 过滤已删除记录，并解析候选位置。
 
         byte[] data;
         await using (var fs = new FileStream(lexPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
@@ -56,7 +56,7 @@ public sealed class LexFileReader
             var pinyin = U16LE.GetString(parts[0]);
             var phrase = U16LE.GetString(parts[1]);
 
-            int index = (int)ReadU32(seg, 6); // header [6..9] 为 index DWORD
+            int index = seg[6]; // 候选位置为单字节，后续字节不属于位置值
 
             // 规范化：
             pinyin = pinyin.Trim();
