@@ -139,7 +139,7 @@ public sealed class DebugCommand : Command<DebugCommand.Settings>
     public override int Execute([NotNull] CommandContext context, [NotNull] Settings settings)
     {
         Console.WriteLine("=== PinyinLexTool 调试信息 ===");
-        Console.WriteLine($"版本: 1.0.1");
+        Console.WriteLine($"版本: {typeof(DebugCommand).Assembly.GetName().Version?.ToString(3)}");
         Console.WriteLine($"运行时间: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         Console.WriteLine($"操作系统: {Environment.OSVersion}");
         Console.WriteLine($"运行时: {Environment.Version}");
