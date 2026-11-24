@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PinyinLexTool", "PinyinLexT
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PinyinLexTool.WPF", "PinyinLexTool.WPF\PinyinLexTool.WPF.csproj", "{F5A7B3D2-4B5C-4A1F-B2D6-F7A5E8D3C0E9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PinyinLexTool.Core", "PinyinLexTool.Core\PinyinLexTool.Core.csproj", "{B173C6E2-7A74-453B-85B1-33243AC3E1B4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{F5A7B3D2-4B5C-4A1F-B2D6-F7A5E8D3C0E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F5A7B3D2-4B5C-4A1F-B2D6-F7A5E8D3C0E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F5A7B3D2-4B5C-4A1F-B2D6-F7A5E8D3C0E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B173C6E2-7A74-453B-85B1-33243AC3E1B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B173C6E2-7A74-453B-85B1-33243AC3E1B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B173C6E2-7A74-453B-85B1-33243AC3E1B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B173C6E2-7A74-453B-85B1-33243AC3E1B4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

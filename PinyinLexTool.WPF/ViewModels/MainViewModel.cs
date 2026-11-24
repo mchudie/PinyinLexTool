@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using PinyinLexTool.Models;
+using PinyinLexTool.Core.Models;
 
 namespace PinyinLexTool.WPF.ViewModels
 {

@@ -1,7 +1,7 @@
 #nullable enable
 using System;
 
-namespace PinyinLexTool.IO;
+namespace PinyinLexTool.Core.IO;
 
 /// <summary>.lex 路径工具。</summary>
 public static class LexPaths

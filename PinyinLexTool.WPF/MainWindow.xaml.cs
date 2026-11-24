@@ -4,8 +4,9 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Win32;
-using PinyinLexTool.IO;
-using PinyinLexTool.Models;
+using PinyinLexTool.Core.IO;
+using PinyinLexTool.Core.Models;
+using PinyinLexTool.Core.Services;
 using PinyinLexTool.WPF.ViewModels;
 
 namespace PinyinLexTool.WPF;

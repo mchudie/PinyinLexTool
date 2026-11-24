@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PinyinLexTool.IO;
+namespace PinyinLexTool.Core.IO;
 
 /// <summary>.lex 文件写入器（基于你的 LINQPad 逻辑移植）。</summary>
 public sealed class LexFileWriter
@@ -90,7 +90,7 @@ public sealed class LexFileWriter
         int phraseCnt = ReadU32(data, PhraseCntPos);
         if (phraseCnt <= 0) return list;
 
-        int tableStart = PhraseLenFirstPos;
+        // int tableStart = PhraseLenFirstPos; // 未使用，移除避免警告
         int firstBlockPos = PhraseLenFirstPos + 4 * (phraseCnt - 1);
         int lastPos = 0;
         for (int i = 0; i < phraseCnt; i++)

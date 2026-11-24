@@ -1,7 +1,8 @@
 ﻿using Spectre.Console.Cli;
 using System.Diagnostics.CodeAnalysis;
 using System.ComponentModel; // for attributes if needed
-using PinyinLexTool.IO;
+using PinyinLexTool.Core.IO;
+using PinyinLexTool.Core.Services;
 
 namespace PinyinLexTool;
 

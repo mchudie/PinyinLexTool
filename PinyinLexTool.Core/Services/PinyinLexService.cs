@@ -3,11 +3,11 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using PinyinLexTool.IO;
-using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using PinyinLexTool.Core.IO;
+using PinyinLexTool.Core.Models;
 
-namespace PinyinLexTool;
+namespace PinyinLexTool.Core.Services;
 
 /// <summary>拼音短语导入/导出服务。</summary>
 public sealed class PinyinLexService

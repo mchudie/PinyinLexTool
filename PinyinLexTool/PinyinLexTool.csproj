@@ -14,4 +14,8 @@
     <PackageReference Include="Spectre.Console.Cli" Version="0.51.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\PinyinLexTool.Core\PinyinLexTool.Core.csproj" />
+  </ItemGroup>
+
 </Project>

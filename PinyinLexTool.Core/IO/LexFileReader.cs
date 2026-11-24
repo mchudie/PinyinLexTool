@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using PinyinLexTool.Models;
+using PinyinLexTool.Core.Models;
 
-namespace PinyinLexTool.IO;
+namespace PinyinLexTool.Core.IO;
 
 /// <summary>.lex 文件读取器。</summary>
 public sealed class LexFileReader
