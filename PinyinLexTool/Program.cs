@@ -1,6 +1,4 @@
-﻿using Spectre.Console.Cli;
-using System.Diagnostics.CodeAnalysis;
-using System.ComponentModel; // for attributes if needed
+﻿using System.CommandLine;
 using PinyinLexTool.Core.IO;
 using PinyinLexTool.Core.Services;
 
@@ -8,42 +6,103 @@ namespace PinyinLexTool;
 
 internal sealed class Program
 {
+    private const int ErrorExitCode = -1;
+
     private static int Main(string[] args)
     {
-        var app = new CommandApp();
-        app.Configure(cfg =>
+        var root = new RootCommand("微软拼音自定义短语管理工具");
+        root.Options.Remove(root.Options.OfType<VersionOption>().Single());
+
+        var lex = new Option<string?>("--lex") { Description = "指定 .lex 文件路径，默认使用当前用户词库" };
+        var verbose = new Option<bool>("--verbose") { Description = "显示详细信息" };
+
+        var list = new Command("list", "列出现有短语，支持按拼音过滤");
+        var filter = new Option<string?>("--filter") { Description = "按拼音筛选短语" };
+        list.Options.Add(lex);
+        list.Options.Add(filter);
+        list.SetAction(result => ListCommand.Execute(new()
         {
-            cfg.SetApplicationName("PinyinLexTool");
-            cfg.AddCommand<ListCommand>("list")
-               .WithDescription("列出现有短语；支持按拼音过滤");
-            cfg.AddCommand<ExportCommand>("export")
-               .WithDescription("导出系统当前自定义短语到 TXT 文件");
-            cfg.AddCommand<ImportCommand>("import")
-               .WithDescription("从 TXT 导入短语到 .lex（相同拼音会替换现有条目）");
-            cfg.AddCommand<DebugCommand>("debug")
-               .WithDescription("显示调试信息，用于问题排查");
-        });
-        return app.Run(args);
+            LexPath = result.GetValue(lex),
+            Filter = result.GetValue(filter)
+        }));
+
+        var export = new Command("export", "导出系统当前自定义短语到 TXT 文件");
+        var output = new Argument<string>("output")
+        {
+            Description = "输出 TXT 文件路径",
+            Arity = ArgumentArity.ExactlyOne
+        };
+        export.Arguments.Add(output);
+        export.Options.Add(lex);
+        export.SetAction(result => ExportCommand.Execute(new()
+        {
+            Output = result.GetRequiredValue(output),
+            LexPath = result.GetValue(lex)
+        }));
+
+        var import = new Command("import", "从 TXT 导入短语到 .lex（相同拼音会替换现有条目）");
+        var input = new Argument<string>("input")
+        {
+            Description = "输入 TXT 文件路径",
+            Arity = ArgumentArity.ExactlyOne
+        };
+        var noBackup = new Option<bool>("--no-backup") { Description = "写入前跳过备份" };
+        var dryRun = new Option<bool>("--dry-run") { Description = "只校验，不写入词库" };
+        import.Arguments.Add(input);
+        import.Options.Add(lex);
+        import.Options.Add(noBackup);
+        import.Options.Add(dryRun);
+        import.Options.Add(verbose);
+        import.SetAction(result => ImportCommand.Execute(new()
+        {
+            Input = result.GetRequiredValue(input),
+            LexPath = result.GetValue(lex),
+            NoBackup = result.GetValue(noBackup),
+            DryRun = result.GetValue(dryRun),
+            Verbose = result.GetValue(verbose)
+        }));
+
+        var debug = new Command("debug", "显示调试信息，用于问题排查");
+        debug.Options.Add(verbose);
+        debug.SetAction(result => DebugCommand.Execute(new()
+        {
+            Verbose = result.GetValue(verbose)
+        }));
+
+        root.Subcommands.Add(list);
+        root.Subcommands.Add(export);
+        root.Subcommands.Add(import);
+        root.Subcommands.Add(debug);
+
+        var invocation = new InvocationConfiguration { EnableDefaultExceptionHandler = false };
+        try
+        {
+            int exitCode = root.Parse(args.Length == 0 ? ["--help"] : args).Invoke(invocation);
+            return exitCode == 0 ? 0 : ErrorExitCode;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            return ErrorExitCode;
+        }
     }
 }
 
 /// <summary>导出命令。</summary>
-public sealed class ExportCommand : Command<ExportCommand.Settings>
+public sealed class ExportCommand
 {
     /// <summary>导出参数。</summary>
-    public sealed class Settings : CommandSettings
+    public sealed class Settings
     {
         /// <summary>输出文件路径（TXT）。</summary>
-        [CommandArgument(0, "<output>")]
         public required string Output { get; init; }
 
         /// <summary>可选：指定 .lex 文件路径；默认读取当前用户路径。</summary>
-        [CommandOption("--lex")]
         public string? LexPath { get; init; }
     }
 
     /// <summary>执行导出逻辑。</summary>
-    public override int Execute([NotNull] CommandContext context, [NotNull] Settings settings)
+    public static int Execute(Settings settings)
     {
         var lexPath = settings.LexPath ?? LexPaths.GetUserLexPath();
         var service = new PinyinLexService(new LexFileReader());
@@ -53,34 +112,29 @@ public sealed class ExportCommand : Command<ExportCommand.Settings>
 }
 
 /// <summary>导入命令。</summary>
-public sealed class ImportCommand : Command<ImportCommand.Settings>
+public sealed class ImportCommand
 {
     /// <summary>导入参数。</summary>
-    public sealed class Settings : CommandSettings
+    public sealed class Settings
     {
         /// <summary>输入 TXT 文件路径。</summary>
-        [CommandArgument(0, "<input>")]
         public required string Input { get; init; }
 
         /// <summary>可选：指定 .lex 文件路径；默认读取当前用户路径。</summary>
-        [CommandOption("--lex")]
         public string? LexPath { get; init; }
 
         /// <summary>禁用备份（默认会在写入前创建 .bak）。</summary>
-        [CommandOption("--no-backup")]
         public bool NoBackup { get; init; }
 
         /// <summary>只校验不落盘。</summary>
-        [CommandOption("--dry-run")]
         public bool DryRun { get; init; }
 
         /// <summary>输出更多详情。</summary>
-        [CommandOption("--verbose")]
         public bool Verbose { get; init; }
     }
 
     /// <summary>执行导入逻辑。</summary>
-    public override int Execute([NotNull] CommandContext context, [NotNull] Settings settings)
+    public static int Execute(Settings settings)
     {
         var lexPath = settings.LexPath ?? LexPaths.GetUserLexPath();
         var service = new PinyinLexService(new LexFileReader());
@@ -91,22 +145,20 @@ public sealed class ImportCommand : Command<ImportCommand.Settings>
 }
 
 /// <summary>列出短语命令。</summary>
-public sealed class ListCommand : Command<ListCommand.Settings>
+public sealed class ListCommand
 {
     /// <summary>参数。</summary>
-    public sealed class Settings : CommandSettings
+    public sealed class Settings
     {
         /// <summary>可选：按拼音过滤。</summary>
-        [CommandOption("--filter")]
         public string? Filter { get; init; }
 
         /// <summary>可选：指定 .lex 文件路径；默认读取当前用户路径。</summary>
-        [CommandOption("--lex")]
         public string? LexPath { get; init; }
     }
 
     /// <summary>执行列表逻辑。</summary>
-    public override int Execute([NotNull] CommandContext context, [NotNull] Settings settings)
+    public static int Execute(Settings settings)
     {
         var lexPath = settings.LexPath ?? LexPaths.GetUserLexPath();
         var reader = new LexFileReader();
@@ -125,18 +177,17 @@ public sealed class ListCommand : Command<ListCommand.Settings>
 }
 
 /// <summary>调试命令。</summary>
-public sealed class DebugCommand : Command<DebugCommand.Settings>
+public sealed class DebugCommand
 {
     /// <summary>调试参数。</summary>
-    public sealed class Settings : CommandSettings
+    public sealed class Settings
     {
         /// <summary>显示详细信息。</summary>
-        [CommandOption("--verbose")]
         public bool Verbose { get; init; }
     }
 
     /// <summary>执行调试逻辑。</summary>
-    public override int Execute([NotNull] CommandContext context, [NotNull] Settings settings)
+    public static int Execute(Settings settings)
     {
         Console.WriteLine("=== PinyinLexTool 调试信息 ===");
         Console.WriteLine($"版本: {typeof(DebugCommand).Assembly.GetName().Version?.ToString(3)}");

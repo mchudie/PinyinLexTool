@@ -1,24 +1,119 @@
-### PinyinLexTool
-微软拼音输入法自定义短语批量导入/导出工具
+# PinyinLexTool
 
-Windows 10/11 自带的微软拼音输入法（Microsoft Pinyin IME）没有提供官方的批量短语导入功能。
-当你需要一次性维护几十上百条自定义短语时，手工逐条录入既耗时又容易出错。
+微软拼音自定义短语管理工具，支持命令行和图形界面两种使用方式。
 
-PinyinLexTool 通过直接操作 `%APPDATA%\Microsoft\InputMethod\Chs\ChsPinyinEUDPv1.lex` 文件，
-实现自定义短语的批量导入、导出与备份。
+本项目最初使用 Cursor 辅助开发。自 `v1.0.2` 的开发与发布起，使用 OpenAI Codex 辅助开发和持续维护，欢迎社区贡献。
 
----
+## 项目结构
+
+- **PinyinLexTool.Core**: 核心业务逻辑库，包含数据模型、文件读写和服务
+- **PinyinLexTool**: 命令行界面 (CLI) 应用程序
+- **PinyinLexTool.WPF**: Windows 图形界面 (GUI) 应用程序
 
 ## 功能特性
-- 批量导入/导出 TXT 短语（拼音 + 位置索引 + 输出文本）
-- 从系统现有短语导出为 TXT
-- 列出现有短语，支持按拼音过滤
-- 同拼音下支持多候选条目
-- 导入时自动备份原文件
-- 支持干运行模式（仅校验不写入）
-- 详细的导入统计与错误报告
-- 支持 Windows 10 1709+ 与 Windows 11
-- 绿色单文件，无需安装或更改输入法
+
+- 📝 **导入短语**: 从 TXT 文件导入自定义短语到微软拼音
+- 📤 **导出短语**: 将当前自定义短语导出为 TXT 文件
+- 🔍 **查看短语**: 列出现有短语，支持按拼音过滤
+- 🖥️ **双界面**: 提供命令行和图形界面两种操作方式
+- 🔧 **调试工具**: 内置调试命令，便于问题排查
+
+## 使用方法
+
+### 命令行界面 (CLI)
+
+```bash
+# 查看帮助
+dotnet run --project PinyinLexTool -- --help
+
+# 列出现有短语
+dotnet run --project PinyinLexTool -- list
+
+# 按拼音过滤
+dotnet run --project PinyinLexTool -- list --filter "ni"
+
+# 导出到文件
+dotnet run --project PinyinLexTool -- export phrases.txt
+
+# 从文件导入
+dotnet run --project PinyinLexTool -- import phrases.txt
+
+# 显示调试信息
+dotnet run --project PinyinLexTool -- debug --verbose
+```
+
+请按示例使用小写选项名，同一选项只传一次。命令成功时返回 `0`，参数错误或执行失败时返回 `-1`。
+
+### 图形界面 (GUI)
+
+```bash
+# 运行图形界面
+dotnet run --project PinyinLexTool.WPF
+```
+
+图形界面提供直观的操作体验，支持：
+- 点击按钮导入/导出短语
+- 实时查看短语列表
+- 按拼音搜索过滤
+
+## 发布版本
+
+### CLI 版本
+```powershell
+# 生成 Windows x64 Native AOT 独立可执行文件
+dotnet publish PinyinLexTool/PinyinLexTool.csproj -c Release -r win-x64 --self-contained true
+```
+
+### GUI 版本
+```powershell
+# 生成 Windows x64 框架依赖的单文件可执行程序
+dotnet publish PinyinLexTool.WPF/PinyinLexTool.WPF.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true
+```
+
+发布后的可执行文件位于：
+- CLI：`PinyinLexTool/bin/Release/net11.0/win-x64/publish/PinyinLexTool.exe`
+- GUI：`PinyinLexTool.WPF/bin/Release/net11.0-windows/win-x64/publish/PinyinLexToolUI.exe`
+
+## 系统要求
+
+- 当前构建面向 Windows x64。Windows 11 与仍在支持期内的指定 Windows 10 版本以 Microsoft 列表为准。[.NET 11 支持的操作系统](https://github.com/dotnet/core/blob/main/release-notes/11.0/supported-os.md#windows)
+- CLI 为 Native AOT 独立程序，从终端运行即可。GUI 需要 [.NET Desktop Runtime 11 x64](https://dotnet.microsoft.com/download/dotnet/11.0)。
+- 微软拼音输入法
+
+## 文件格式
+
+### TXT 格式
+每行一个短语，格式：`拼音 序号 短语内容`
+```
+ni 1 你好
+hao 1 好
+```
+
+### .lex 格式
+微软拼音自定义短语的二进制格式，由工具自动处理。
+
+## 开发
+
+从源码构建需要 .NET 11 SDK。生成 Windows x64 Native AOT 版 CLI 还需要 Visual Studio 的「使用 C++ 的桌面开发」工作负载及 Windows SDK。[Native AOT 工具链](https://learn.microsoft.com/dotnet/core/deploying/native-aot/?tabs=windows)
+
+```bash
+# 克隆项目
+git clone https://github.com/mchudie/PinyinLexTool.git
+cd PinyinLexTool
+
+# 还原依赖
+dotnet restore
+
+# 构建项目
+dotnet build
+
+# 运行测试
+dotnet test
+```
+
+## 许可证
+
+MIT License - 详见 [LICENSE](LICENSE) 文件。
 
 ---
 
@@ -26,6 +121,7 @@ PinyinLexTool 通过直接操作 `%APPDATA%\Microsoft\InputMethod\Chs\ChsPinyinE
 
 ### 获取
 前往项目 Releases 下载可执行文件后解压使用。
+既有发布版本的运行时要求以对应 Release 的更新说明为准。
 
 ### 短语格式
 准备一个 `phrases.txt` 文本文件，每行一个短语，格式为：
@@ -193,6 +289,8 @@ MIT License
 
 ## 致谢
 
+- 感谢 @xinshoushangdao 贡献 WPF 图形界面。[PR #2](https://github.com/mchudie/PinyinLexTool/pull/2)
+- 感谢所有提交 Issue、贡献代码和参与测试的用户。
 - 参考了社区对微软拼音 `.lex` 文件格式的研究
 - 借鉴了部分开源脚本与实现思路（如 Python 原型）
 

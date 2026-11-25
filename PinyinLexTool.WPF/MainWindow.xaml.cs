@@ -99,7 +99,7 @@ public partial class MainWindow : Window
             this.Cursor = System.Windows.Input.Cursors.Wait;
 
             // 如果是直接输入的内容，先保存到临时文件
-            string tempFile = null;
+            string? tempFile = null;
             string importPath = _viewModel.ImportFilePath;
             
             if (string.IsNullOrEmpty(importPath) || !File.Exists(importPath))
