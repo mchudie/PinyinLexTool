@@ -48,10 +48,12 @@ internal sealed class Program
         };
         var noBackup = new Option<bool>("--no-backup") { Description = "写入前跳过备份" };
         var dryRun = new Option<bool>("--dry-run") { Description = "只校验，不写入词库" };
+        var replaceAll = new Option<bool>("--replace-all") { Description = "全量替换词库，只保留本次导入的短语" };
         import.Arguments.Add(input);
         import.Options.Add(lex);
         import.Options.Add(noBackup);
         import.Options.Add(dryRun);
+        import.Options.Add(replaceAll);
         import.Options.Add(verbose);
         import.SetAction(result => ImportCommand.Execute(new()
         {
@@ -59,6 +61,7 @@ internal sealed class Program
             LexPath = result.GetValue(lex),
             NoBackup = result.GetValue(noBackup),
             DryRun = result.GetValue(dryRun),
+            ReplaceAll = result.GetValue(replaceAll),
             Verbose = result.GetValue(verbose)
         }));
 
@@ -129,6 +132,9 @@ public sealed class ImportCommand
         /// <summary>只校验不落盘。</summary>
         public bool DryRun { get; init; }
 
+        /// <summary>以本次输入替换整个词库。</summary>
+        public bool ReplaceAll { get; init; }
+
         /// <summary>输出更多详情。</summary>
         public bool Verbose { get; init; }
     }
@@ -139,7 +145,8 @@ public sealed class ImportCommand
         var lexPath = settings.LexPath ?? LexPaths.GetUserLexPath();
         var service = new PinyinLexService(new LexFileReader());
         var doBackup = !settings.NoBackup;
-        service.ImportAsync(lexPath, settings.Input, doBackup, settings.DryRun, settings.Verbose).GetAwaiter().GetResult();
+        service.ImportAsync(lexPath, settings.Input, doBackup, settings.DryRun, settings.Verbose, settings.ReplaceAll)
+            .GetAwaiter().GetResult();
         return 0;
     }
 }

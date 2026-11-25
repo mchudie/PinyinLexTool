@@ -41,7 +41,11 @@ public sealed class PinyinLexService
     /// <summary>从 TXT 导入短语到 .lex 文件（相同拼音会替换现有条目）。</summary>
     /// <param name="lexPath">.lex 文件路径。</param>
     /// <param name="inputPath">输入 TXT，格式：拼音 空格 索引 空格 文本。</param>
-    public async Task ImportAsync(string lexPath, string inputPath, bool backup, bool dryRun = false, bool verbose = false)
+    public Task ImportAsync(string lexPath, string inputPath, bool backup, bool dryRun = false, bool verbose = false)
+        => ImportAsync(lexPath, inputPath, backup, dryRun, verbose, replaceAll: false);
+
+    /// <summary>从 TXT 导入短语，可选择以本次输入替换整个词库。</summary>
+    public async Task ImportAsync(string lexPath, string inputPath, bool backup, bool dryRun, bool verbose, bool replaceAll)
     {
         var text = await File.ReadAllTextAsync(inputPath, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         var lines = text.Replace("\r\n", "\n").Split('\n');
@@ -69,10 +73,35 @@ public sealed class PinyinLexService
             ok++;
         }
 
+        if (replaceAll && skipped > 0)
+        {
+            var details = string.Join(Environment.NewLine, reasons);
+            throw new InvalidDataException($"全量替换已取消，检测到 {skipped} 行无效。{Environment.NewLine}{details}");
+        }
+
+        if (replaceAll && ok == 0)
+        {
+            throw new InvalidDataException("全量替换至少需要一条有效短语。");
+        }
+
         if (verbose)
         {
             System.Console.WriteLine($"读取完成：共 {total} 行，合规 {ok}，跳过 {skipped}");
             foreach (var r in reasons) System.Console.WriteLine(r);
+        }
+
+        var writer = new LexFileWriter();
+        if (replaceAll)
+        {
+            var fullPath = Path.GetFullPath(lexPath);
+            var backupPath = backup && !dryRun
+                ? GetBackupPath(fullPath, $"{DateTime.Now:yyyyMMdd_HHmmss}.{Guid.NewGuid():N}")
+                : null;
+            int removed = writer.ReplaceAll(fullPath, items, backupPath, dryRun);
+            System.Console.WriteLine(dryRun
+                ? $"干运行：将移除 {removed} 条旧短语，写入 {ok} 条（未实际落盘）"
+                : $"全量替换完成：移除 {removed} 条旧短语，写入 {ok} 条");
+            return;
         }
 
         if (dryRun)
@@ -83,18 +112,21 @@ public sealed class PinyinLexService
 
         if (backup && File.Exists(lexPath))
         {
-            var dir = Path.GetDirectoryName(lexPath)!;
-            var name = Path.GetFileNameWithoutExtension(lexPath);
-            var ext = Path.GetExtension(lexPath);
             var ts = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            var bak = Path.Combine(dir, $"{name}.{ts}.bak{ext}");
-            File.Copy(lexPath, bak, overwrite: false);
+            File.Copy(lexPath, GetBackupPath(lexPath, ts), overwrite: false);
         }
 
-        var writer = new LexFileWriter();
         int overwritten = await writer.UpsertAsync(lexPath, items);
 
         System.Console.WriteLine($"导入完成：写入 {ok} 条，覆盖 {overwritten} 条，跳过 {skipped} 条");
+    }
+
+    private static string GetBackupPath(string lexPath, string suffix)
+    {
+        var directory = Path.GetDirectoryName(lexPath)!;
+        var name = Path.GetFileNameWithoutExtension(lexPath);
+        var extension = Path.GetExtension(lexPath);
+        return Path.Combine(directory, $"{name}.{suffix}.bak{extension}");
     }
 
     /// <summary>校验拼音：最多32个小写字母，且不以 u/v 开头。</summary>

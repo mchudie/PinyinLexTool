@@ -13,6 +13,7 @@ public sealed class LexFileWriter
 {
     private static readonly Encoding U16LE = Encoding.Unicode;
     private static readonly byte[] PhraseSep = new byte[] { 0x00, 0x00 };
+    private static readonly byte[] DefaultTailBytes = [0xA5, 0x2C];
 
     /// <summary>插入或更新一批短语：同拼音覆盖旧记录。</summary>
     public async Task<int> UpsertAsync(string lexPath, IReadOnlyList<(string Pinyin, int Index, string Text)> items)
@@ -33,22 +34,80 @@ public sealed class LexFileWriter
             filtered.Add(r);
         }
 
+        WriteWithNewRecords(lexPath, filtered, items, tailBytes);
+        await Task.CompletedTask;
+        return overwritten;
+    }
+
+    internal int ReplaceAll(
+        string lexPath,
+        IReadOnlyList<(string Pinyin, int Index, string Text)> items,
+        string? backupPath,
+        bool dryRun)
+    {
+        var exists = File.Exists(lexPath);
+        if (dryRun)
+        {
+            return exists ? ReadExistingRecords(lexPath, out _, requireLexHeader: true).Count : 0;
+        }
+
+        var directory = Path.GetDirectoryName(lexPath)!;
+        Directory.CreateDirectory(directory);
+        var temporaryPath = Path.Combine(directory, $".pinyinlextool-{Guid.NewGuid():N}.tmp");
+        var created = false;
+        try
+        {
+            // 暂存时阻止就地写入，并允许最后的文件替换。
+            using var original = exists
+                ? new FileStream(lexPath, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete)
+                : null;
+            using (var temporary = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                created = true;
+                if (original is null)
+                    WriteInitialHeader(temporary);
+                else
+                    original.CopyTo(temporary);
+            }
+
+            byte[]? learnedTail = null;
+            var removed = exists ? ReadExistingRecords(temporaryPath, out learnedTail, requireLexHeader: true).Count : 0;
+            WriteWithNewRecords(temporaryPath, new List<Rec>(items.Count), items, learnedTail ?? DefaultTailBytes);
+
+            if (exists)
+                File.Replace(temporaryPath, lexPath, backupPath);
+            else
+                File.Move(temporaryPath, lexPath);
+
+            return removed;
+        }
+        finally
+        {
+            if (created && File.Exists(temporaryPath))
+                File.Delete(temporaryPath);
+        }
+    }
+
+    private static void WriteWithNewRecords(
+        string lexPath,
+        List<Rec> records,
+        IReadOnlyList<(string Pinyin, int Index, string Text)> items,
+        byte[] tailBytes)
+    {
         foreach (var n in items)
         {
             var pinyinBytes = U16LE.GetBytes(n.Pinyin);
             var phraseBytes = U16LE.GetBytes(n.Text);
             var header = BuildHeader(16 + pinyinBytes.Length + PhraseSep.Length, n.Index, tailBytes);
-            filtered.Add(new Rec(false, pinyinBytes, header, phraseBytes));
+            records.Add(new Rec(false, pinyinBytes, header, phraseBytes));
         }
 
-        var records = filtered
+        var ordered = records
             .OrderBy(record => record.PinyinBytes, Comparer<byte[]>.Create(CompareBytes))
             .ThenBy(record => record.Header16[CandidatePositionOffset])
             .ToList();
 
-        WriteAll(lexPath, records);
-        await Task.CompletedTask;
-        return overwritten;
+        WriteAll(lexPath, ordered);
     }
 
     private static ReadOnlySpan<byte> HeaderMagic => "mschxudp"u8; // ASCII
@@ -66,7 +125,12 @@ public sealed class LexFileWriter
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         using var fs = File.Create(path);
-        using var bw = new BinaryWriter(fs, U16LE, leaveOpen: true);
+        WriteInitialHeader(fs);
+    }
+
+    private static void WriteInitialHeader(Stream stream)
+    {
+        using var bw = new BinaryWriter(stream, U16LE, leaveOpen: true);
 
         var hdr = new List<byte>();
         hdr.AddRange(HeaderMagic);                 // 8B
@@ -78,13 +142,19 @@ public sealed class LexFileWriter
         bw.Write(new byte[32]); // 总 68B
     }
 
-    private static List<Rec> ReadExistingRecords(string path, out byte[]? learnedTail)
+    private static List<Rec> ReadExistingRecords(string path, out byte[]? learnedTail, bool requireLexHeader = false)
     {
         learnedTail = null;
         var list = new List<Rec>();
         using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         using var br = new BinaryReader(fs, U16LE, leaveOpen: true);
         var data = br.ReadBytes((int)fs.Length);
+        if (requireLexHeader &&
+            (data.Length < PhraseLenFirstPos || !data.AsSpan(0, HeaderMagic.Length).SequenceEqual(HeaderMagic)))
+        {
+            throw new InvalidDataException("无法识别目标文件的 .lex 词库格式。");
+        }
+
         if (data.Length < PhraseLenFirstPos) return list;
 
         int phraseCnt = ReadU32(data, PhraseCntPos);
@@ -163,7 +233,7 @@ public sealed class LexFileWriter
             if (tail is { Length: >= 2 }) return tail;
         }
         catch { }
-        return new byte[] { 0xA5, 0x2C };
+        return DefaultTailBytes;
     }
 
     private static List<byte[]> SplitBy00(byte[] buf, int minPartBytes)
