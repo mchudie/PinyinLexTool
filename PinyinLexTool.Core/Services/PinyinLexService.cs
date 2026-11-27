@@ -129,11 +129,10 @@ public sealed class PinyinLexService
         return Path.Combine(directory, $"{name}.{suffix}.bak{extension}");
     }
 
-    /// <summary>校验拼音：最多32个小写字母，且不以 u/v 开头。</summary>
+    /// <summary>校验拼音键由 1 到 32 个英文字母组成。</summary>
     private static bool ValidatePinyin(string pinyin)
     {
         if (pinyin.Length == 0 || pinyin.Length > 32) return false;
-        if (pinyin.StartsWith("u") || pinyin.StartsWith("v")) return false;
         for (int i = 0; i < pinyin.Length; i++)
         {
             char c = pinyin[i];
